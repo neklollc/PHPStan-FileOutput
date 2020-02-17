@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace noximo;
 
+use Nette\DirectoryNotFoundException;
 use Nette\IOException;
 use Nette\Utils\FileSystem;
 use Nette\Utils\RegexpException;
@@ -11,7 +12,6 @@ use Nette\Utils\Strings;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
-use Safe\Exceptions\DirException;
 use Webmozart\PathUtil\Path;
 
 final class FileOutput implements ErrorFormatter
@@ -59,7 +59,14 @@ final class FileOutput implements ErrorFormatter
     public function __construct(string $outputFile, ?ErrorFormatter $defaultFormatterClass = null, ?string $customTemplate = null)
     {
         $this->defaultFormatter = $defaultFormatterClass;
-        $cwd = \Safe\getcwd() . DIRECTORY_SEPARATOR;
+        $cwd = \getcwd();
+
+        if ($cwd === false) {
+            $error = error_get_last();
+            throw new DirectoryNotFoundException($error['message'] ?? 'An error occured', 0, $error['type'] ?? 1);
+        }
+
+        $cwd = $cwd . DIRECTORY_SEPARATOR;
         try {
             $outputFile = Strings::replace($outputFile, '{time}', (string)time());
         } catch (RegexpException $e) {
